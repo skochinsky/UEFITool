@@ -1,6 +1,6 @@
 /* ffsparser.h
 
-Copyright (c) 2016, Nikolaj Schlej. All rights reserved.
+Copyright (c) 2017, LongSoft. All rights reserved.
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
 which accompanies this distribution.  The full text of the license may be found at
@@ -15,81 +15,113 @@ WITHWARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 #include <vector>
 
+#include "basetypes.h"
 #include "ustring.h"
 #include "ubytearray.h"
-#include "basetypes.h"
 #include "treemodel.h"
-#include "utility.h"
-#include "peimage.h"
-#include "parsingdata.h"
-#include "types.h"
-#include "treemodel.h"
-#include "descriptor.h"
-#include "ffs.h"
-#include "gbe.h"
-#include "me.h"
+#include "bootguard.h"
 #include "fit.h"
-#include "nvram.h"
 
-class TreeModel;
+typedef struct BG_PROTECTED_RANGE_ {
+    UINT32     Offset;
+    UINT32     Size;
+    UINT8      Type;
+    UByteArray Hash;
+} BG_PROTECTED_RANGE;
+
+#define BG_PROTECTED_RANGE_INTEL_BOOT_GUARD_IBB      0x01
+#define BG_PROTECTED_RANGE_INTEL_BOOT_GUARD_POST_IBB 0x02
+#define BG_PROTECTED_RANGE_VENDOR_HASH_PHOENIX       0x03
+#define BG_PROTECTED_RANGE_VENDOR_HASH_AMI_OLD       0x04
+#define BG_PROTECTED_RANGE_VENDOR_HASH_AMI_NEW       0x05
+#define BG_PROTECTED_RANGE_VENDOR_HASH_MICROSOFT     0x06
+
+class NvramParser;
+class MeParser;
 
 class FfsParser
 {
 public:
-    // Default constructor and destructor
-    FfsParser(TreeModel* treeModel) : model(treeModel), capsuleOffsetFixup(0) {}
-    ~FfsParser() {}
+    // Constructor and destructor
+    FfsParser(TreeModel* treeModel);
+    ~FfsParser();
 
-    // Returns messages 
-    std::vector<std::pair<UString, UModelIndex> > getMessages() const { return messagesVector; }
-    // Clears messages
+    // Obtain parser messages 
+    std::vector<std::pair<UString, UModelIndex> > getMessages() const;
+    // Clear messages
     void clearMessages() { messagesVector.clear(); }
 
-    // Firmware image parsing
+    // Parse firmware image
     USTATUS parse(const UByteArray &buffer);
     
     // Obtain parsed FIT table
-    std::vector<std::vector<UString> > getFitTable() const { return fitTable; }
+    std::vector<std::pair<std::vector<UString>, UModelIndex> > getFitTable() const { return fitTable; }
+
+    // Obtain Security Info
+    UString getSecurityInfo() const { return securityInfo; }
+
+    // Obtain offset/address difference
+    UINT64 getAddressDiff() { return addressDiff; }
 
 private:
     TreeModel *model;
     std::vector<std::pair<UString, UModelIndex> > messagesVector;
-    void msg(const UString message, const UModelIndex index = UModelIndex()) {
+    void msg(const UString & message, const UModelIndex & index = UModelIndex()) {
         messagesVector.push_back(std::pair<UString, UModelIndex>(message, index));
     };
 
+    NvramParser* nvramParser;
+    MeParser* meParser;
+ 
+    UByteArray openedImage;
     UModelIndex lastVtf;
-    UINT32 capsuleOffsetFixup;
-    std::vector<std::vector<UString> > fitTable;
+    UINT32 imageBase;
+    UINT64 addressDiff;
+    std::vector<std::pair<std::vector<UString>, UModelIndex> > fitTable;
+    
+    UString securityInfo;
+    bool bgAcmFound;
+    bool bgKeyManifestFound;
+    bool bgBootPolicyFound;
+    UByteArray bgKmHash;
+    UByteArray bgBpHash;
+    UByteArray bgBpDigest;
+    std::vector<BG_PROTECTED_RANGE> bgProtectedRanges;
+    UINT64 bgProtectedRegionsBase;
+    UModelIndex bgDxeCoreIndex;
 
     // First pass
     USTATUS performFirstPass(const UByteArray & imageFile, UModelIndex & index);
 
+    USTATUS parseCapsule(const UByteArray & capsule, const UINT32 localOffset, const UModelIndex & parent, UModelIndex & index);
+    USTATUS parseIntelImage(const UByteArray & intelImage, const UINT32 localOffset, const UModelIndex & parent, UModelIndex & index);
+    USTATUS parseGenericImage(const UByteArray & intelImage, const UINT32 localOffset, const UModelIndex & parent, UModelIndex & index);
+
     USTATUS parseRawArea(const UModelIndex & index);
-    USTATUS parseVolumeHeader(const UByteArray & volume, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index);
+    USTATUS parseVolumeHeader(const UByteArray & volume, const UINT32 localOffset, const UModelIndex & parent, UModelIndex & index);
     USTATUS parseVolumeBody(const UModelIndex & index);
-    USTATUS parseFileHeader(const UByteArray & file, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index);
+    USTATUS parseMicrocodeVolumeBody(const UModelIndex & index);
+    USTATUS parseFileHeader(const UByteArray & file, const UINT32 localOffset, const UModelIndex & parent, UModelIndex & index);
     USTATUS parseFileBody(const UModelIndex & index);
-    USTATUS parseSectionHeader(const UByteArray & section, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index, const bool insertIntoTree);
+    USTATUS parseSectionHeader(const UByteArray & section, const UINT32 localOffset, const UModelIndex & parent, UModelIndex & index, const bool insertIntoTree);
     USTATUS parseSectionBody(const UModelIndex & index);
 
-    USTATUS parseIntelImage(const UByteArray & intelImage, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & root);
-    USTATUS parseGbeRegion(const UByteArray & gbe, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index);
-    USTATUS parseMeRegion(const UByteArray & me, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index);
-    USTATUS parseBiosRegion(const UByteArray & bios, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index);
-    USTATUS parsePdrRegion(const UByteArray & pdr, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index);
-    USTATUS parseGeneralRegion(const UINT8 subtype, const UByteArray & region, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index);
+    USTATUS parseGbeRegion(const UByteArray & gbe, const UINT32 localOffset, const UModelIndex & parent, UModelIndex & index);
+    USTATUS parseMeRegion(const UByteArray & me, const UINT32 localOffset, const UModelIndex & parent, UModelIndex & index);
+    USTATUS parseBiosRegion(const UByteArray & bios, const UINT32 localOffset, const UModelIndex & parent, UModelIndex & index);
+    USTATUS parsePdrRegion(const UByteArray & pdr, const UINT32 localOffset, const UModelIndex & parent, UModelIndex & index);
+    USTATUS parseGenericRegion(const UINT8 subtype, const UByteArray & region, const UINT32 localOffset, const UModelIndex & parent, UModelIndex & index);
 
     USTATUS parsePadFileBody(const UModelIndex & index);
-    USTATUS parseVolumeNonUefiData(const UByteArray & data, const UINT32 parentOffset, const UModelIndex & index);
+    USTATUS parseVolumeNonUefiData(const UByteArray & data, const UINT32 localOffset, const UModelIndex & index);
 
     USTATUS parseSections(const UByteArray & sections, const UModelIndex & index, const bool insertIntoTree);
-    USTATUS parseCommonSectionHeader(const UByteArray & section, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index, const bool insertIntoTree);
-    USTATUS parseCompressedSectionHeader(const UByteArray & section, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index, const bool insertIntoTree);
-    USTATUS parseGuidedSectionHeader(const UByteArray & section, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index, const bool insertIntoTree);
-    USTATUS parseFreeformGuidedSectionHeader(const UByteArray & section, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index, const bool insertIntoTree);
-    USTATUS parseVersionSectionHeader(const UByteArray & section, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index, const bool insertIntoTree);
-    USTATUS parsePostcodeSectionHeader(const UByteArray & section, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index, const bool insertIntoTree);
+    USTATUS parseCommonSectionHeader(const UByteArray & section, const UINT32 localOffset, const UModelIndex & parent, UModelIndex & index, const bool insertIntoTree);
+    USTATUS parseCompressedSectionHeader(const UByteArray & section, const UINT32 localOffset, const UModelIndex & parent, UModelIndex & index, const bool insertIntoTree);
+    USTATUS parseGuidedSectionHeader(const UByteArray & section, const UINT32 localOffset, const UModelIndex & parent, UModelIndex & index, const bool insertIntoTree);
+    USTATUS parseFreeformGuidedSectionHeader(const UByteArray & section, const UINT32 localOffset, const UModelIndex & parent, UModelIndex & index, const bool insertIntoTree);
+    USTATUS parseVersionSectionHeader(const UByteArray & section, const UINT32 localOffset, const UModelIndex & parent, UModelIndex & index, const bool insertIntoTree);
+    USTATUS parsePostcodeSectionHeader(const UByteArray & section, const UINT32 localOffset, const UModelIndex & parent, UModelIndex & index, const bool insertIntoTree);
 
     USTATUS parseCompressedSectionBody(const UModelIndex & index);
     USTATUS parseGuidedSectionBody(const UModelIndex & index);
@@ -100,43 +132,37 @@ private:
     USTATUS parsePeImageSectionBody(const UModelIndex & index);
     USTATUS parseTeImageSectionBody(const UModelIndex & index);
 
-    UINT8   getPaddingType(const UByteArray & padding);
     USTATUS parseAprioriRawSection(const UByteArray & body, UString & parsed);
-    USTATUS findNextVolume(const UModelIndex & index, const UByteArray & bios, const UINT32 parentOffset, const UINT32 volumeOffset, UINT32 & nextVolumeOffset);
-    USTATUS getVolumeSize(const UByteArray & bios, const UINT32 volumeOffset, UINT32 & volumeSize, UINT32 & bmVolumeSize);
+    USTATUS findNextRawAreaItem(const UModelIndex & index, const UINT32 localOffset, UINT8 & nextItemType, UINT32 & nextItemOffset, UINT32 & nextItemSize, UINT32 & nextItemAlternativeSize);
     UINT32  getFileSize(const UByteArray & volume, const UINT32 fileOffset, const UINT8 ffsVersion);
     UINT32  getSectionSize(const UByteArray & file, const UINT32 sectionOffset, const UINT8 ffsVersion);
-
-    // NVRAM parsing
-    USTATUS parseNvramVolumeBody(const UModelIndex & index);
-    USTATUS findNextStore(const UModelIndex & index, const UByteArray & volume, const UINT32 parentOffset, const UINT32 storeOffset, UINT32 & nextStoreOffset);
-    USTATUS getStoreSize(const UByteArray & data, const UINT32 storeOffset, UINT32 & storeSize);
-    USTATUS parseStoreHeader(const UByteArray & store, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index);
-    
-    USTATUS parseNvarStore(const UModelIndex & index);
-    USTATUS parseVssStoreHeader(const UByteArray & store, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index);
-    USTATUS parseFtwStoreHeader(const UByteArray & store, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index);
-    USTATUS parseFdcStoreHeader(const UByteArray & store, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index);
-    USTATUS parseFsysStoreHeader(const UByteArray & store, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index);
-    USTATUS parseEvsaStoreHeader(const UByteArray & store, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index);
-    USTATUS parseFlashMapStoreHeader(const UByteArray & store, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index);
-    USTATUS parseCmdbStoreHeader(const UByteArray & store, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index);
-    USTATUS parseSlicPubkeyHeader(const UByteArray & store, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index);
-    USTATUS parseSlicMarkerHeader(const UByteArray & store, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index);
-    USTATUS parseIntelMicrocodeHeader(const UByteArray & store, const UINT32 parentOffset, const UModelIndex & parent, UModelIndex & index);
-    
-    USTATUS parseVssStoreBody(const UModelIndex & index);
-    USTATUS parseFsysStoreBody(const UModelIndex & index);
-    USTATUS parseEvsaStoreBody(const UModelIndex & index);
-    USTATUS parseFlashMapBody(const UModelIndex & index);
 
     // Second pass
     USTATUS performSecondPass(const UModelIndex & index);
     USTATUS addOffsetsRecursive(const UModelIndex & index);
-    USTATUS addMemoryAddressesRecursive(const UModelIndex & index, const UINT32 diff);
+    USTATUS addMemoryAddressesRecursive(const UModelIndex & index);
     USTATUS addFixedAndCompressedRecursive(const UModelIndex & index);
-    USTATUS parseFit(const UModelIndex & index, const UINT32 diff);
-    USTATUS findFitRecursive(const UModelIndex & index, const UINT32 diff, UModelIndex & found, UINT32 & fitOffset);
+    USTATUS checkProtectedRanges(const UModelIndex & index);
+    USTATUS markProtectedRangeRecursive(const UModelIndex & index, const BG_PROTECTED_RANGE & range);
+
+    USTATUS parseFit(const UModelIndex & index);
+    USTATUS parseVendorHashFile(const UByteArray & fileGuid, const UModelIndex & index);
+    USTATUS parseIntelMicrocodeHeader(const UByteArray & store, const UINT32 localOffset, const UModelIndex & parent, UModelIndex & index);
+
+#ifdef U_ENABLE_FIT_PARSING_SUPPORT
+    USTATUS findFitRecursive(const UModelIndex & index, UModelIndex & found, UINT32 & fitOffset);
+
+    // FIT entries
+    USTATUS parseFitEntryMicrocode(const UByteArray & microcode, const UINT32 localOffset, const UModelIndex & parent, UString & info, UINT32 &realSize);
+    USTATUS parseFitEntryAcm(const UByteArray & acm, const UINT32 localOffset, const UModelIndex & parent, UString & info, UINT32 &realSize);
+    USTATUS parseFitEntryBootGuardKeyManifest(const UByteArray & keyManifest, const UINT32 localOffset, const UModelIndex & parent, UString & info, UINT32 &realSize);
+    USTATUS parseFitEntryBootGuardBootPolicy(const UByteArray & bootPolicy, const UINT32 localOffset, const UModelIndex & parent, UString & info, UINT32 &realSize);
+    USTATUS findNextBootGuardBootPolicyElement(const UByteArray & bootPolicy, const UINT32 elementOffset, UINT32 & nextElementOffset, UINT32 & nextElementSize);
+#endif
+
+#ifdef U_ENABLE_NVRAM_PARSING_SUPPORT
+    friend class NvramParser; // Make FFS parsing routines accessible to NvramParser
+#endif
 };
 
 #endif // FFSPARSER_H

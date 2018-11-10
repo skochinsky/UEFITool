@@ -16,8 +16,8 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #ifndef PEIMAGE_H
 #define PEIMAGE_H
 
-#include "ustring.h"
 #include "basetypes.h"
+#include "ustring.h"
 
 extern UString machineTypeToUString(UINT16 machineType);
 
@@ -586,8 +586,8 @@ typedef struct {
 } EFI_IMAGE_THUNK_DATA;
 
 #define EFI_IMAGE_ORDINAL_FLAG              0x80000000 // Flag for PE32.
-#define EFI_IMAGE_SNAP_BY_ORDINAL(Ordinal)  ((Ordinal & EFI_IMAGE_ORDINAL_FLAG) != 0)
-#define EFI_IMAGE_ORDINAL(Ordinal)          (Ordinal & 0xffff)
+#define EFI_IMAGE_SNAP_BY_ORDINAL(Ordinal)  (((Ordinal) & EFI_IMAGE_ORDINAL_FLAG) != 0)
+#define EFI_IMAGE_ORDINAL(Ordinal)          ((Ordinal) & 0xffff)
 
 //
 // Import Directory Table

@@ -14,6 +14,7 @@ WITHWARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #define DESCRIPTOR_H
 
 #include "basetypes.h"
+#include "ustring.h"
 
 // Make sure we use right packing rules
 #pragma pack(push,1)
@@ -32,6 +33,19 @@ typedef struct FLASH_DESCRIPTOR_HEADER_ {
 
 // Maximum base value in descriptor map
 #define FLASH_DESCRIPTOR_MAX_BASE  0xE0
+
+// Descriptor version was reserved in older firmware
+#define FLASH_DESCRIPTOR_VERSION_INVALID 0xFFFFFFFF
+// The only known version found in Coffee Lake
+#define FLASH_DESCRIPTOR_VERSION_MAJOR   1
+#define FLASH_DESCRIPTOR_VERSION_MINOR   0
+
+// Descriptor version present in Coffee Lake and newer
+typedef struct _FLASH_DESCRIPTOR_VERSION {
+    UINT32 Reserved : 14;
+    UINT32 Minor : 7;
+    UINT32 Major : 11;
+} FLASH_DESCRIPTOR_VERSION;
 
 // Descriptor map
 // Base fields are storing bits [11:4] of actual base addresses, all other bits are 0
@@ -53,6 +67,8 @@ typedef struct FLASH_DESCRIPTOR_MAP_ {
     UINT32 ProcStrapsBase : 8;
     UINT32 NumberOfProcStraps : 8;      // One-based number of UINT32s to read as processor straps, min=0, max=255 (1 Kb)
     UINT32 : 16;
+    // FLMAP 3
+    UINT32 DescriptorVersion;           // Reserved prior to Coffee Lake
 } FLASH_DESCRIPTOR_MAP;
 
 // Component section
@@ -62,7 +78,7 @@ typedef struct FLASH_PARAMETERS_ {
     UINT8 SecondChipDensity : 4;
     UINT8 : 8;
     UINT8 : 1;
-    UINT8 ReadClockFrequency : 3; // Hardcoded value of 20 Mhz (000b) in v1 descriptors and 17 Mhz (110b) in v2 ones
+    UINT8 ReadClockFrequency : 3; // Hardcoded value of 20 Mhz (000b) in v1 descriptors
     UINT8 FastReadEnabled : 1;
     UINT8 FastReadFrequency : 3;
     UINT8 FlashWriteFrequency : 3;
@@ -105,25 +121,37 @@ typedef struct FLASH_DESCRIPTOR_COMPONENT_SECTION_ {
 // If limit is zero - region is not present
 typedef struct FLASH_DESCRIPTOR_REGION_SECTION_ {
     UINT16 DescriptorBase;             // Descriptor
-    UINT16 DescriptorLimit;            //                           
+    UINT16 DescriptorLimit;            //
     UINT16 BiosBase;                   // BIOS
     UINT16 BiosLimit;                  //
-    UINT16 MeBase;                     // ME
+    UINT16 MeBase;                     // Management Engine
     UINT16 MeLimit;                    //
-    UINT16 GbeBase;                    // GbE
+    UINT16 GbeBase;                    // Gigabit Ethernet
     UINT16 GbeLimit;                   //
-    UINT16 PdrBase;                    // PDR
+    UINT16 PdrBase;                    // Platform Data
     UINT16 PdrLimit;                   //
-    UINT16 Reserved1Base;              // Reserved1
-    UINT16 Reserved1Limit;             //
-    UINT16 Reserved2Base;              // Reserved2
-    UINT16 Reserved2Limit;             //
-    UINT16 Reserved3Base;              // Reserved3
-    UINT16 Reserved3Limit;             //
-    UINT16 EcBase;                     // EC
+    UINT16 DevExp1Base;                // Device Expansion 1
+    UINT16 DevExp1Limit;               //
+    UINT16 Bios2Base;                  // Secondary BIOS
+    UINT16 Bios2Limit;                 //
+    UINT16 MicrocodeBase;              // CPU microcode
+    UINT16 MicrocodeLimit;             //
+    UINT16 EcBase;                     // Embedded Controller
     UINT16 EcLimit;                    //
-    UINT16 Reserved4Base;              // Reserved4
-    UINT16 Reserved4Limit;             //
+    UINT16 DevExp2Base;                // Device Expansion 2
+    UINT16 DevExp2Limit;               //
+    UINT16 IeBase;                     // Innovation Engine
+    UINT16 IeLimit;                    //
+    UINT16 Tgbe1Base;                  // 10 Gigabit Ethernet 1
+    UINT16 Tgbe1Limit;                 //
+    UINT16 Tgbe2Base;                  // 10 Gigabit Ethernet 2
+    UINT16 Tgbe2Limit;                 //
+    UINT16 Reserved1Base;              // Reserved 1
+    UINT16 Reserved1Limit;             //
+    UINT16 Reserved2Base;              // Reserved 2
+    UINT16 Reserved2Limit;             //
+    UINT16 PttBase;                    // Platform Trust Technology
+    UINT16 PttLimit;                   //
 } FLASH_DESCRIPTOR_REGION_SECTION;
 
 // Master section
@@ -200,5 +228,8 @@ extern const UINT8* calculateAddress16(const UINT8* baseAddress, const UINT16 ba
 extern UINT32 calculateRegionOffset(const UINT16 base);
 // Calculate size of region using it's base and limit
 extern UINT32 calculateRegionSize(const UINT16 base, const UINT16 limit);
+
+// Return human-readable chip name for given JEDEC ID
+extern UString jedecIdToUString(UINT8 vendorId, UINT8 deviceId0, UINT8 deviceId1);
 
 #endif // DESCRIPTOR_H

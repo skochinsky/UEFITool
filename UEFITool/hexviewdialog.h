@@ -16,7 +16,7 @@
 
 #include <QDialog>
 #include "../common/treemodel.h"
-#include "../qhexedit2/qhexedit.h"
+#include "qhexedit2/qhexedit.h"
 #include "ui_hexviewdialog.h"
 
 class HexViewDialog : public QDialog
@@ -28,7 +28,7 @@ public:
     ~HexViewDialog();
     Ui::HexViewDialog* ui;
 
-    void setItem(const UModelIndex & index);
+    void setItem(const UModelIndex & index, bool bodyOnly);
     void setFont(const QFont &font);
 
 private:

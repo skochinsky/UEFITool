@@ -17,16 +17,16 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <list>
 #include <iterator>
 
+#include "basetypes.h"
 #include "ubytearray.h"
 #include "ustring.h"
-#include "basetypes.h"
 
 class TreeItem
 {
 public:
-    TreeItem(const UINT8 type, const UINT8 subtype, const UString &name, const UString &text, const UString &info,
+    TreeItem(const UINT32 offset, const UINT8 type, const UINT8 subtype, const UString &name, const UString &text, const UString &info,
         const UByteArray & header, const UByteArray & body, const UByteArray & tail,
-        const bool fixed, const bool compressed, const UByteArray & parsingData,
+        const bool fixed, const bool compressed,
         TreeItem *parent = 0);
     ~TreeItem();                                                               // Non-trivial implementation in CPP file
 
@@ -38,21 +38,24 @@ public:
 
     // Model support operations
     TreeItem *child(int row);                                                  // Non-trivial implementation in CPP file
-    int childCount() const {return childItems.size(); }
+    int childCount() const {return (int)childItems.size(); }
     int columnCount() const { return 5; }
     UString data(int column) const;                                            // Non-trivial implementation in CPP file
     int row() const;                                                           // Non-trivial implementation in CPP file
     TreeItem *parent() { return parentItem; }
 
     // Getters and setters for item parameters
-    UString name() const  { return itemName; }
-    void setName(const UString &text) { itemName = text; }
+    UINT32 offset() const  { return itemOffset; }
+    void setOffset(const UINT32 offset) { itemOffset = offset; }
 
     UINT8 type() const  { return itemType; }
     void setType(const UINT8 type) { itemType = type; }
 
     UINT8 subtype() const { return itemSubtype; }
     void setSubtype(const UINT8 subtype) { itemSubtype = subtype; }
+
+    UString name() const  { return itemName; }
+    void setName(const UString &text) { itemName = text; }
 
     UString text() const { return itemText; }
     void setText(const UString &text) { itemText = text; }
@@ -65,10 +68,6 @@ public:
 
     UByteArray tail() const { return itemTail; };
     bool hasEmptyTail() const { return itemTail.isEmpty(); }
-
-    UByteArray parsingData() const { return itemParsingData; }
-    bool hasEmptyParsingData() const { return itemParsingData.isEmpty(); }
-    void setParsingData(const UByteArray & data) { itemParsingData = data; }
 
     UString info() const { return itemInfo; }
     void addInfo(const UString &info, const bool append) { if (append) itemInfo += info; else itemInfo = info + itemInfo; }
@@ -83,20 +82,29 @@ public:
     bool compressed() const { return itemCompressed; }
     void setCompressed(const bool compressed) { itemCompressed = compressed; }
 
+    UByteArray parsingData() const { return itemParsingData; };
+    bool hasEmptyParsingData() const { return itemParsingData.isEmpty(); }
+    void setParsingData(const UByteArray & pdata) { itemParsingData = pdata; }
+
+    UINT8 marking() const { return itemMarking; }
+    void setMarking(const UINT8 marking) { itemMarking = marking; }
+
 private:
     std::list<TreeItem*> childItems;
+    UINT32     itemOffset;
     UINT8      itemAction;
     UINT8      itemType;
     UINT8      itemSubtype;
+    UINT8      itemMarking;
     UString    itemName;
     UString    itemText;
     UString    itemInfo;
     UByteArray itemHeader;
     UByteArray itemBody;
     UByteArray itemTail;
-    UByteArray itemParsingData;
     bool       itemFixed;
     bool       itemCompressed;
+    UByteArray itemParsingData;
     TreeItem*  parentItem;
 };
 

@@ -15,16 +15,18 @@ WITHWARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 #include <vector>
 
+#include "basetypes.h"
 #include "ubytearray.h"
 #include "ustring.h"
-#include "basetypes.h"
 
 // Make sure we use right packing rules
 #pragma pack(push,1)
 
-extern UString guidToUString(const EFI_GUID& guid);
+extern UString guidToUString(const EFI_GUID& guid, bool convertToString = true);
+extern bool ustringToGuid(const UString& str, EFI_GUID& guid);
 extern UString fileTypeToUString(const UINT8 type);
 extern UString sectionTypeToUString(const UINT8 type);
+
 
 //*****************************************************************************
 // EFI Capsule
@@ -113,53 +115,58 @@ typedef struct EFI_FIRMWARE_VOLUME_HEADER_ {
 } EFI_FIRMWARE_VOLUME_HEADER;
 
 // Standard file system GUIDs
-const UByteArray EFI_FIRMWARE_FILE_SYSTEM_GUID
+const UByteArray EFI_FIRMWARE_FILE_SYSTEM_GUID // 7A9354D9-0468-444A-81CE-0BF617D890DF
 ("\xD9\x54\x93\x7A\x68\x04\x4A\x44\x81\xCE\x0B\xF6\x17\xD8\x90\xDF", 16);
-const UByteArray EFI_FIRMWARE_FILE_SYSTEM2_GUID
+
+const UByteArray EFI_FIRMWARE_FILE_SYSTEM2_GUID // 8C8CE578-8A3D-4F1C-9935-896185C32DD3
 ("\x78\xE5\x8C\x8C\x3D\x8A\x1C\x4F\x99\x35\x89\x61\x85\xC3\x2D\xD3", 16);
-// Vendor-specific file system GUIDs
-const UByteArray EFI_APPLE_BOOT_VOLUME_FILE_SYSTEM_GUID
-("\xAD\xEE\xAD\x04\xFF\x61\x31\x4D\xB6\xBA\x64\xF8\xBF\x90\x1F\x5A", 16);
-const UByteArray EFI_APPLE_BOOT_VOLUME_FILE_SYSTEM2_GUID
-("\x8C\x1B\x00\xBD\x71\x6A\x7B\x48\xA1\x4F\x0C\x2A\x2D\xCF\x7A\x5D", 16);
-
-// AD3FFFFF-D28B-44C4-9F13-9EA98A97F9F0 // Intel 1
-const UByteArray EFI_INTEL_FILE_SYSTEM_GUID
-("\xFF\xFF\x3F\xAD\x8B\xD2\xC4\x44\x9F\x13\x9E\xA9\x8A\x97\xF9\xF0", 16);
-// D6A1CD70-4B33-4994-A6EA-375F2CCC5437 // Intel 2
-const UByteArray EFI_INTEL_FILE_SYSTEM2_GUID
-("\x70\xCD\xA1\xD6\x33\x4B\x94\x49\xA6\xEA\x37\x5F\x2C\xCC\x54\x37", 16);
-// 4F494156-AED6-4D64-A537-B8A5557BCEEC // Sony 1
-const UByteArray EFI_SONY_FILE_SYSTEM_GUID
-("\x56\x41\x49\x4F\xD6\xAE\x64\x4D\xA5\x37\xB8\xA5\x55\x7B\xCE\xEC", 16);
-
-
-// Vector of volume GUIDs with FFSv2-compatible files
-extern const std::vector<UByteArray> FFSv2Volumes;
 
 const UByteArray EFI_FIRMWARE_FILE_SYSTEM3_GUID // 5473C07A-3DCB-4DCA-BD6F-1E9689E7349A
 ("\x7A\xC0\x73\x54\xCB\x3D\xCA\x4D\xBD\x6F\x1E\x96\x89\xE7\x34\x9A", 16);
+
+// Vendor-specific file system GUIDs
+const UByteArray EFI_APPLE_IMMUTABLE_FV_GUID // 04ADEEAD-61FF-4D31-B6BA-64F8BF901F5A
+("\xAD\xEE\xAD\x04\xFF\x61\x31\x4D\xB6\xBA\x64\xF8\xBF\x90\x1F\x5A", 16);
+
+const UByteArray EFI_APPLE_AUTHENTICATION_FV_GUID // BD001B8C-6A71-487B-A14F-0C2A2DCF7A5D
+("\x8C\x1B\x00\xBD\x71\x6A\x7B\x48\xA1\x4F\x0C\x2A\x2D\xCF\x7A\x5D", 16);
+
+const UByteArray EFI_APPLE_MICROCODE_VOLUME_GUID // 153D2197-29BD-44DC-AC59-887F70E41A6B
+("\x97\x21\x3D\x15\xBD\x29\xDC\x44\xAC\x59\x88\x7F\x70\xE4\x1A\x6B", 16);
+#define EFI_APPLE_MICROCODE_VOLUME_HEADER_SIZE 0x100
+
+const UByteArray EFI_INTEL_FILE_SYSTEM_GUID // AD3FFFFF-D28B-44C4-9F13-9EA98A97F9F0
+("\xFF\xFF\x3F\xAD\x8B\xD2\xC4\x44\x9F\x13\x9E\xA9\x8A\x97\xF9\xF0", 16);
+
+const UByteArray EFI_INTEL_FILE_SYSTEM2_GUID // D6A1CD70-4B33-4994-A6EA-375F2CCC5437
+("\x70\xCD\xA1\xD6\x33\x4B\x94\x49\xA6\xEA\x37\x5F\x2C\xCC\x54\x37", 16);
+
+const UByteArray EFI_SONY_FILE_SYSTEM_GUID // 4F494156-AED6-4D64-A537-B8A5557BCEEC
+("\x56\x41\x49\x4F\xD6\xAE\x64\x4D\xA5\x37\xB8\xA5\x55\x7B\xCE\xEC", 16);
+
+// Vector of volume GUIDs with FFSv2-compatible files
+extern const std::vector<UByteArray> FFSv2Volumes;
 
 // Vector of volume GUIDs with FFSv3-compatible files
 extern const std::vector<UByteArray> FFSv3Volumes;
 
 // Firmware volume signature
-const UByteArray EFI_FV_SIGNATURE("_FVH", 4);
+#define EFI_FV_SIGNATURE 0x4856465F // _FVH
 #define EFI_FV_SIGNATURE_OFFSET 0x28
 
 // Firmware volume attributes
 // Revision 1
-#define EFI_FVB_READ_DISABLED_CAP  0x00000001
-#define EFI_FVB_READ_ENABLED_CAP   0x00000002
-#define EFI_FVB_READ_STATUS        0x00000004
-#define EFI_FVB_WRITE_DISABLED_CAP 0x00000008
-#define EFI_FVB_WRITE_ENABLED_CAP  0x00000010
-#define EFI_FVB_WRITE_STATUS       0x00000020
-#define EFI_FVB_LOCK_CAP           0x00000040
-#define EFI_FVB_LOCK_STATUS        0x00000080
-#define EFI_FVB_STICKY_WRITE       0x00000200
-#define EFI_FVB_MEMORY_MAPPED      0x00000400
-#define EFI_FVB_ERASE_POLARITY     0x00000800
+#define EFI_FVB_READ_DISABLED_CAP   0x00000001
+#define EFI_FVB_READ_ENABLED_CAP    0x00000002
+#define EFI_FVB_READ_STATUS         0x00000004
+#define EFI_FVB_WRITE_DISABLED_CAP  0x00000008
+#define EFI_FVB_WRITE_ENABLED_CAP   0x00000010
+#define EFI_FVB_WRITE_STATUS        0x00000020
+#define EFI_FVB_LOCK_CAP            0x00000040
+#define EFI_FVB_LOCK_STATUS         0x00000080
+#define EFI_FVB_STICKY_WRITE        0x00000200
+#define EFI_FVB_MEMORY_MAPPED       0x00000400
+#define EFI_FVB_ERASE_POLARITY      0x00000800
 #define EFI_FVB_ALIGNMENT_CAP       0x00008000
 #define EFI_FVB_ALIGNMENT_2         0x00010000
 #define EFI_FVB_ALIGNMENT_4         0x00020000
@@ -248,7 +255,7 @@ typedef struct EFI_FIRMWARE_VOLUME_EXT_ENTRY_ {
 typedef struct EFI_FIRMWARE_VOLUME_EXT_HEADER_OEM_TYPE_ {
     EFI_FIRMWARE_VOLUME_EXT_ENTRY    Header;
     UINT32                           TypeMask;
-    //EFI_GUID                         Types[1];
+    //EFI_GUID                       Types[];
 } EFI_FIRMWARE_VOLUME_EXT_HEADER_OEM_TYPE;
 
 #define EFI_FV_EXT_TYPE_GUID_TYPE  0x0002
@@ -288,7 +295,7 @@ UINT8                   Type;
 UINT8                   Attributes;
 UINT8                   Size[3]; // Set to 0xFFFFFF
 UINT8                   State;
-UINT32                  ExtendedSize;
+UINT64                  ExtendedSize;
 } EFI_FFS_FILE_HEADER2;
 
 // Standard data checksum, used if FFS_ATTRIB_CHECKSUM is clear
@@ -306,10 +313,12 @@ UINT32                  ExtendedSize;
 #define EFI_FV_FILETYPE_DRIVER                  0x07
 #define EFI_FV_FILETYPE_COMBINED_PEIM_DRIVER    0x08
 #define EFI_FV_FILETYPE_APPLICATION             0x09
-#define EFI_FV_FILETYPE_SMM                     0x0A
+#define EFI_FV_FILETYPE_MM                      0x0A
 #define EFI_FV_FILETYPE_FIRMWARE_VOLUME_IMAGE   0x0B
-#define EFI_FV_FILETYPE_COMBINED_SMM_DXE        0x0C
-#define EFI_FV_FILETYPE_SMM_CORE                0x0D
+#define EFI_FV_FILETYPE_COMBINED_MM_DXE         0x0C
+#define EFI_FV_FILETYPE_MM_CORE                 0x0D
+#define EFI_FV_FILETYPE_MM_STANDALONE           0x0E
+#define EFI_FV_FILETYPE_MM_CORE_STANDALONE      0x0F
 #define EFI_FV_FILETYPE_OEM_MIN                 0xC0
 #define EFI_FV_FILETYPE_OEM_MAX                 0xDF
 #define EFI_FV_FILETYPE_DEBUG_MIN               0xE0
@@ -322,12 +331,17 @@ UINT32                  ExtendedSize;
 #define FFS_ATTRIB_TAIL_PRESENT       0x01 // Valid only for revision 1 volumes
 #define FFS_ATTRIB_RECOVERY           0x02 // Valid only for revision 1 volumes
 #define FFS_ATTRIB_LARGE_FILE         0x01 // Valid only for FFSv3 volumes
+#define FFS_ATTRIB_DATA_ALIGNMENT2    0x02 // Volaid only for revision 2 volumes, added in UEFI PI 1.6
 #define FFS_ATTRIB_FIXED              0x04
 #define FFS_ATTRIB_DATA_ALIGNMENT     0x38
 #define FFS_ATTRIB_CHECKSUM           0x40
 
 // FFS alignment table
 extern const UINT8 ffsAlignmentTable[];
+
+// Extended FFS alignment table, added in UEFI PI 1.6
+extern const UINT8 ffsAlignment2Table[];
+
 
 // File states
 #define EFI_FILE_HEADER_CONSTRUCTION    0x01
@@ -336,6 +350,7 @@ extern const UINT8 ffsAlignmentTable[];
 #define EFI_FILE_MARKED_FOR_UPDATE      0x08
 #define EFI_FILE_DELETED                0x10
 #define EFI_FILE_HEADER_INVALID         0x20
+#define EFI_FILE_ERASE_POLARITY         0x80 // Defined as "all other bits must be set to ERASE_POLARITY" in UEFI PI
 
 // PEI apriori file
 const UByteArray EFI_PEI_APRIORI_FILE_GUID
@@ -352,6 +367,18 @@ const UByteArray EFI_FFS_VOLUME_TOP_FILE_GUID
 // Pad file GUID
 const UByteArray EFI_FFS_PAD_FILE_GUID
 ("\x85\x65\x53\xE4\x09\x79\x60\x4A\xB5\xC6\xEC\xDE\xA6\xEB\xFB\x54", 16);
+
+// AMI DXE core file
+const UByteArray AMI_CORE_DXE_GUID // 5AE3F37E-4EAE-41AE-8240-35465B5E81EB
+("\x7E\xF3\xE3\x5A\xAE\x4E\xAE\x41\x82\x40\x35\x46\x5B\x5E\x81\xEB", 16);
+
+// EDK2 DXE code file
+const UByteArray EFI_DXE_CORE_GUID // D6A2CB7F-6A18-4E2F-B43B-9920A733700A
+("\x7F\xCB\xA2\xD6\x18\x6A\x2F\x4E\xB4\x3B\x99\x20\xA7\x33\x70\x0A", 16);
+
+// TXT ACM
+const UByteArray EFI_TXT_ACM_GUID // 2D27C618-7DCD-41F5-BB10-21166BE7E143
+("\x18\xC6\x27\x2D\xCD\x7D\xF5\x41\xBB\x10\x21\x16\x6B\xE7\xE1\x43", 16);
 
 // FFS size conversion routines
 extern VOID uint32ToUint24(UINT32 size, UINT8* ffsSize);
@@ -406,7 +433,7 @@ typedef struct EFI_COMMON_SECTION_HEADER_APPLE {
 #define EFI_SECTION_FREEFORM_SUBTYPE_GUID   0x18
 #define EFI_SECTION_RAW                     0x19
 #define EFI_SECTION_PEI_DEPEX               0x1B
-#define EFI_SECTION_SMM_DEPEX               0x1C
+#define EFI_SECTION_MM_DEPEX                0x1C
 #define PHOENIX_SECTION_POSTCODE            0xF0 // Specific to Phoenix SCT images
 #define INSYDE_SECTION_POSTCODE             0x20 // Specific to Insyde H2O images
 
@@ -454,6 +481,9 @@ const UByteArray EFI_GUIDED_SECTION_TIANO // A31280AD-481E-41B6-95E8-127F4C98477
 const UByteArray EFI_GUIDED_SECTION_LZMA // EE4E5898-3914-4259-9D6E-DC7BD79403CF
 ("\x98\x58\x4E\xEE\x14\x39\x59\x42\x9D\x6E\xDC\x7B\xD7\x94\x03\xCF", 16);
 
+const UByteArray EFI_GUIDED_SECTION_LZMAF86 // D42AE6BD-1352-4BFB-909A-CA72A6EAE889
+("\xBD\xE6\x2A\xD4\x52\x13\xFB\x4B\x90\x9A\xCA\x72\xA6\xEA\xE8\x89", 16);
+
 const UByteArray EFI_FIRMWARE_CONTENTS_SIGNED_GUID // 0F9D89E8-9259-4F76-A5AF-0C89E34023DF
 ("\xE8\x89\x9D\x0F\x59\x92\x76\x4F\xA5\xAF\x0C\x89\xE3\x40\x23\xDF", 16);
 
@@ -474,15 +504,18 @@ typedef struct WIN_CERTIFICATE_UEFI_GUID_ {
 } WIN_CERTIFICATE_UEFI_GUID;
 
 // WIN_CERTIFICATE_UEFI_GUID.CertType
-const UByteArray EFI_CERT_TYPE_RSA2048_SHA256_GUID
+const UByteArray EFI_CERT_TYPE_RSA2048_SHA256_GUID // A7717414-C616-4977-9420-844712A735BF
 ("\x14\x74\x71\xA7\x16\xC6\x77\x49\x94\x20\x84\x47\x12\xA7\x35\xBF");
 
 // WIN_CERTIFICATE_UEFI_GUID.CertData
-typedef struct EFI_CERT_BLOCK_RSA_2048_SHA256_ {
-    UINT32  HashType;
-    UINT8   PublicKey[256];
-    UINT8   Signature[256];
-} EFI_CERT_BLOCK_RSA_2048_SHA256;
+typedef struct EFI_CERT_BLOCK_RSA2048_SHA256_ {
+    EFI_GUID  HashType;
+    UINT8     PublicKey[256];
+    UINT8     Signature[256];
+} EFI_CERT_BLOCK_RSA2048_SHA256;
+
+const UByteArray EFI_HASH_ALGORITHM_SHA256_GUID // 51aa59de-fdf2-4ea3-bc63-875fb7842ee9
+("\xde\x59\xAA\x51\xF2\xFD\xA3\x4E\xBC\x63\x87\x5F\xB7\x84\x2E\xE9");
 
 // Version section
 typedef struct EFI_VERSION_SECTION_ {

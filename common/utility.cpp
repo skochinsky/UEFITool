@@ -11,6 +11,10 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 */
 
+#include <cstdio>
+#include <cctype>
+#include <cstring>
+
 #include "treemodel.h"
 #include "utility.h"
 #include "ffs.h"
@@ -19,54 +23,24 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include "LZMA/LzmaCompress.h"
 #include "LZMA/LzmaDecompress.h"
 
-// Returns either new parsing data instance or obtains it from index
-PARSING_DATA parsingDataFromUModelIndex(const UModelIndex & index)
-{
-    if (index.isValid()) {
-        TreeModel* model = (TreeModel*)index.model();
-        if (!model->hasEmptyParsingData(index))
-            return *(PARSING_DATA*)model->parsingData(index).data();
-    }
-
-    PARSING_DATA data;
-    data.offset = 0;
-    data.address = 0;
-    data.ffsVersion = 0;    // Unknown by default
-    data.emptyByte = 0xFF;  // Default value for SPI flash
-
-    // Type-specific parts remain unitialized
-    return data;
-}
-
-// Converts parsing data to byte array
-UByteArray parsingDataToUByteArray(const PARSING_DATA & pdata)
-{
-    return UByteArray((const char*)&pdata, sizeof(PARSING_DATA));
-}
-
 // Returns unique name string based for tree item
 UString uniqueItemName(const UModelIndex & index)
 {
     // Sanity check
     if (!index.isValid())
-        return UString("Invalid index");
+        return UString("Invalid_index");
 
     // Get model from index
     const TreeModel* model = (const TreeModel*)index.model();
-
-    // Get data from parsing data
-    PARSING_DATA pdata = parsingDataFromUModelIndex(index);
     
     // Construct the name
     UString itemName = model->name(index);
     UString itemText = model->text(index);
 
     // Default name
+
     UString name = itemName;
     switch (model->type(index)) {
-    case Types::Volume:
-        if (pdata.volume.hasExtendedHeader) name = guidToUString(pdata.volume.extendedHeaderGuid); 
-        break;
     case Types::NvarEntry:
     case Types::VssEntry:
     case Types::FsysEntry:
@@ -80,23 +54,32 @@ UString uniqueItemName(const UModelIndex & index)
         UModelIndex fileIndex = model->findParentOfType(index, Types::File);
         UString fileText = model->text(fileIndex);
         name = fileText.isEmpty() ? model->name(fileIndex) : model->name(fileIndex) + '_' + fileText;
-        } break;
+
+        // Special case of GUIDed sections
+        if (model->subtype(index) == EFI_SECTION_GUID_DEFINED || model->subtype(index) == EFI_SECTION_FREEFORM_SUBTYPE_GUID) {
+            name = model->name(index) +'_' + name;
+        }
+    } break;
     }
 
+    // Populate subtypeString
     UString subtypeString = itemSubtypeToUString(model->type(index), model->subtype(index));
+
+    // Create final name
     name = itemTypeToUString(model->type(index))
         + (subtypeString.length() ? ('_' + subtypeString) : UString())
         + '_' + name;
 
+    // Replace some symbols with underscopes for better readability
     name.findreplace(' ', '_');
     name.findreplace('/', '_');
-    name.findreplace('-', '_');
+    name.findreplace('\\', '_');
 
     return name;
 }
 
 // Returns text representation of error code
-UString errorCodeToUString(UINT8 errorCode)
+UString errorCodeToUString(USTATUS errorCode)
 {
     switch (errorCode) {
     case U_SUCCESS:                         return UString("Success");
@@ -204,18 +187,18 @@ UINT32 crc32(UINT32 initial, const UINT8* buffer, const UINT32 length)
 }
 
 // Compression routines
-USTATUS decompress(const UByteArray & compressedData, UINT8 & algorithm, UByteArray & decompressedData, UByteArray & efiDecompressedData)
+USTATUS decompress(const UByteArray & compressedData, const UINT8 compressionType, UINT8 & algorithm, UByteArray & decompressedData, UByteArray & efiDecompressedData)
 {
     const UINT8* data;
-    UINT32 dataSize;
+    UINT32  dataSize;
     UINT8* decompressed;
     UINT8* efiDecompressed;
-    UINT32 decompressedSize = 0;
+    UINT32  decompressedSize = 0;
     UINT8* scratch;
-    UINT32 scratchSize = 0;
+    UINT32  scratchSize = 0;
     const EFI_TIANO_HEADER* header;
 
-    switch (algorithm)
+    switch (compressionType)
     {
     case EFI_NOT_COMPRESSED:
         decompressedData = compressedData;
@@ -243,9 +226,9 @@ USTATUS decompress(const UByteArray & compressedData, UINT8 & algorithm, UByteAr
         efiDecompressed = (UINT8*)malloc(decompressedSize);
         scratch = (UINT8*)malloc(scratchSize);
         if (!decompressed || !efiDecompressed || !scratch) {
-            if (decompressed) free(decompressed);
-            if (efiDecompressed) free(efiDecompressed);
-            if (scratch) free(scratch);
+            free(decompressed);
+            free(efiDecompressed);
+            free(scratch);
             return U_STANDARD_DECOMPRESSION_FAILED;
         }
 
@@ -256,18 +239,25 @@ USTATUS decompress(const UByteArray & compressedData, UINT8 & algorithm, UByteAr
         // Try EFI 1.1
         USTATUS EfiResult = EfiDecompress(data, dataSize, efiDecompressed, decompressedSize, scratch, scratchSize);
 
+        if (decompressedSize > INT32_MAX) {
+            free(decompressed);
+            free(efiDecompressed);
+            free(scratch);
+            return U_STANDARD_DECOMPRESSION_FAILED;
+        }
+
         if (EfiResult == U_SUCCESS && TianoResult == U_SUCCESS) { // Both decompressions are OK 
             algorithm = COMPRESSION_ALGORITHM_UNDECIDED;
-            decompressedData = UByteArray((const char*)decompressed, decompressedSize);
-            efiDecompressedData = UByteArray((const char*)efiDecompressed, decompressedSize);
+            decompressedData = UByteArray((const char*)decompressed, (int)decompressedSize);
+            efiDecompressedData = UByteArray((const char*)efiDecompressed, (int)decompressedSize);
         }
         else if (TianoResult == U_SUCCESS) { // Only Tiano is OK
             algorithm = COMPRESSION_ALGORITHM_TIANO;
-            decompressedData = UByteArray((const char*)decompressed, decompressedSize);
+            decompressedData = UByteArray((const char*)decompressed, (int)decompressedSize);
         }
         else if (EfiResult == U_SUCCESS) { // Only EFI 1.1 is OK
             algorithm = COMPRESSION_ALGORITHM_EFI11;
-            decompressedData = UByteArray((const char*)efiDecompressed, decompressedSize);
+            decompressedData = UByteArray((const char*)efiDecompressed, (int)decompressedSize);
         }
         else { // Both decompressions failed
             result = U_STANDARD_DECOMPRESSION_FAILED;
@@ -314,13 +304,21 @@ USTATUS decompress(const UByteArray & compressedData, UINT8 & algorithm, UByteAr
                 return U_CUSTOMIZED_DECOMPRESSION_FAILED;
             }
             else {
+                if (decompressedSize > INT32_MAX) {
+                    free(decompressed);
+                    return U_CUSTOMIZED_DECOMPRESSION_FAILED;
+                }
                 algorithm = COMPRESSION_ALGORITHM_IMLZMA;
-                decompressedData = UByteArray((const char*)decompressed, decompressedSize);
+                decompressedData = UByteArray((const char*)decompressed, (int)decompressedSize);
             }
         }
         else {
+            if (decompressedSize > INT32_MAX) {
+                free(decompressed);
+                return U_CUSTOMIZED_DECOMPRESSION_FAILED;
+            }
             algorithm = COMPRESSION_ALGORITHM_LZMA;
-            decompressedData = UByteArray((const char*)decompressed, decompressedSize);
+            decompressedData = UByteArray((const char*)decompressed, (int)decompressedSize);
         }
 
         free(decompressed);
@@ -331,8 +329,8 @@ USTATUS decompress(const UByteArray & compressedData, UINT8 & algorithm, UByteAr
     }
 }
 
-// 8bit checksum calculation routine
-UINT8 calculateChecksum8(const UINT8* buffer, UINT32 bufferSize)
+// 8bit sum calculation routine
+UINT8 calculateSum8(const UINT8* buffer, UINT32 bufferSize)
 {
     if (!buffer)
         return 0;
@@ -342,7 +340,16 @@ UINT8 calculateChecksum8(const UINT8* buffer, UINT32 bufferSize)
     while (bufferSize--)
         counter += buffer[bufferSize];
 
-    return (UINT8)(0x100 - counter);
+    return counter;
+}
+
+// 8bit checksum calculation routine
+UINT8 calculateChecksum8(const UINT8* buffer, UINT32 bufferSize)
+{
+    if (!buffer)
+        return 0;
+
+    return (UINT8)(0x100U - calculateSum8(buffer, bufferSize));
 }
 
 // 16bit checksum calculation routine
@@ -361,4 +368,79 @@ UINT16 calculateChecksum16(const UINT16* buffer, UINT32 bufferSize)
     }
 
     return (UINT16)(0x10000 - counter);
+}
+
+// Get padding type for a given padding
+UINT8 getPaddingType(const UByteArray & padding)
+{
+    if (padding.count('\x00') == padding.size())
+        return Subtypes::ZeroPadding;
+    if (padding.count('\xFF') == padding.size())
+        return Subtypes::OnePadding;
+    return Subtypes::DataPadding;
+}
+
+static inline int char2hex(char c) {
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    if (c >= 'A' && c <= 'F')
+        return c - 'A' + 10;
+    if (c == '.')
+        return -2;
+    return -1;
+}
+
+INTN findPattern(const UINT8 *pattern, const UINT8 *patternMask, UINTN patternSize,
+    const UINT8 *data, UINTN dataSize, UINTN dataOff) {
+    if (patternSize == 0 || dataSize == 0 || dataOff >= dataSize || dataSize - dataOff < patternSize)
+        return -1;
+
+    while (dataOff + patternSize < dataSize) {
+        BOOLEAN matches = TRUE;
+        for (UINTN i = 0; i < patternSize; i++) {
+            if ((data[dataOff + i] & patternMask[i]) != pattern[i]) {
+                matches = FALSE;
+                break;
+            }
+        }
+
+        if (matches)
+            return static_cast<INTN>(dataOff);
+
+        dataOff++;
+    }
+
+    return -1;
+}
+
+BOOLEAN makePattern(const CHAR8 *textPattern, std::vector<UINT8> &pattern, std::vector<UINT8> &patternMask) {
+    UINTN len = std::strlen(textPattern);
+
+    if (len == 0 || len % 2 != 0)
+        return FALSE;
+
+    len /= 2;
+
+    pattern.resize(len);
+    patternMask.resize(len);
+
+    for (UINTN i = 0; i < len; i++) {
+        int v1 = char2hex(std::toupper(textPattern[i * 2]));
+        int v2 = char2hex(std::toupper(textPattern[i * 2 + 1]));
+
+        if (v1 == -1 || v2 == -1)
+            return FALSE;
+
+        if (v1 != -2) {
+            patternMask[i] = 0xF0;
+            pattern[i] = static_cast<UINT8>(v1) << 4;
+        }
+
+        if (v2 != -2) {
+            patternMask[i] |= 0x0F;
+            pattern[i] |= static_cast<UINT8>(v2);
+        }
+    }
+
+    return TRUE;
 }

@@ -1,6 +1,6 @@
 /* uefitool_main.cpp
 
-  Copyright (c) 2014, Nikolaj Schlej. All rights reserved.
+  Copyright (c) 2018, LongSoft. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -18,8 +18,8 @@
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-    a.setOrganizationName("CodeRush");
-    a.setOrganizationDomain("coderush.me");
+    a.setOrganizationName("LongSoft");
+    a.setOrganizationDomain("longsoft.org");
     a.setApplicationName("UEFITool");
 
     UEFITool w;

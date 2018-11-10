@@ -132,15 +132,15 @@
            <property name="readOnly">
             <bool>true</bool>
            </property>
-           <property name="centerOnScroll">
-            <bool>false</bool>
-           </property>
           </widget>
          </item>
         </layout>
        </widget>
       </widget>
       <widget class="QTabWidget" name="messagesTabWidget">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
        <property name="currentIndex">
         <number>0</number>
        </property>
@@ -199,6 +199,44 @@
             <enum>Qt::Horizontal</enum>
            </property>
            <widget class="QTableWidget" name="fitTableWidget"/>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="securityTab">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <attribute name="title">
+         <string>Security</string>
+        </attribute>
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>5</number>
+         </property>
+         <property name="topMargin">
+          <number>5</number>
+         </property>
+         <property name="rightMargin">
+          <number>5</number>
+         </property>
+         <property name="bottomMargin">
+          <number>5</number>
+         </property>
+         <item>
+          <widget class="QPlainTextEdit" name="securityEdit">
+           <property name="acceptDrops">
+            <bool>false</bool>
+           </property>
+           <property name="undoRedoEnabled">
+            <bool>false</bool>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
           </widget>
          </item>
         </layout>
@@ -273,7 +311,7 @@
      <x>0</x>
      <y>0</y>
      <width>851</width>
-     <height>21</height>
+     <height>31</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -284,7 +322,11 @@
     <addaction name="actionOpenImageFileInNewWindow"/>
     <addaction name="actionSaveImageFile"/>
     <addaction name="separator"/>
-    <addaction name="actionSearch"/>
+    <addaction name="actionGenerateReport"/>
+    <addaction name="separator"/>
+    <addaction name="actionLoadGuidDatabase"/>
+    <addaction name="actionLoadDefaultGuidDatabase"/>
+    <addaction name="actionUnloadGuidDatabase"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
@@ -300,15 +342,22 @@
      <string>&amp;Action</string>
     </property>
     <widget class="QMenu" name="menuCapsuleActions">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="title">
       <string>&amp;Capsule</string>
      </property>
      <addaction name="actionHexView"/>
+     <addaction name="actionBodyHexView"/>
      <addaction name="separator"/>
      <addaction name="actionExtract"/>
      <addaction name="actionExtractBody"/>
     </widget>
     <widget class="QMenu" name="menuImageActions">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="title">
       <string>&amp;Image</string>
      </property>
@@ -317,6 +366,9 @@
      <addaction name="actionExtract"/>
     </widget>
     <widget class="QMenu" name="menuRegionActions">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="title">
       <string>&amp;Region</string>
      </property>
@@ -329,6 +381,9 @@
      <addaction name="actionReplace"/>
     </widget>
     <widget class="QMenu" name="menuPaddingActions">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="title">
       <string>&amp;Padding</string>
      </property>
@@ -337,10 +392,14 @@
      <addaction name="actionExtract"/>
     </widget>
     <widget class="QMenu" name="menuVolumeActions">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="title">
       <string>&amp;Volume</string>
      </property>
      <addaction name="actionHexView"/>
+     <addaction name="actionBodyHexView"/>
      <addaction name="separator"/>
      <addaction name="actionExtract"/>
      <addaction name="actionExtractBody"/>
@@ -353,10 +412,14 @@
      <addaction name="actionReplaceBody"/>
     </widget>
     <widget class="QMenu" name="menuFileActions">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="title">
       <string>&amp;File</string>
      </property>
      <addaction name="actionHexView"/>
+     <addaction name="actionBodyHexView"/>
      <addaction name="separator"/>
      <addaction name="actionExtract"/>
      <addaction name="actionExtractBody"/>
@@ -373,10 +436,14 @@
      <addaction name="actionRemove"/>
     </widget>
     <widget class="QMenu" name="menuSectionActions">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="title">
       <string>&amp;Section</string>
      </property>
      <addaction name="actionHexView"/>
+     <addaction name="actionBodyHexView"/>
      <addaction name="separator"/>
      <addaction name="actionExtract"/>
      <addaction name="actionExtractBody"/>
@@ -393,7 +460,10 @@
      <addaction name="separator"/>
      <addaction name="actionRemove"/>
     </widget>
-    <widget class="QMenu" name="menuMessages">
+    <widget class="QMenu" name="menuMessageActions">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="title">
       <string>&amp;Messages</string>
      </property>
@@ -402,11 +472,15 @@
      <addaction name="separator"/>
      <addaction name="actionMessagesClear"/>
     </widget>
-    <widget class="QMenu" name="menuVariableActions">
+    <widget class="QMenu" name="menuEntryActions">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="title">
-      <string>Variable</string>
+      <string>&amp;Entry</string>
      </property>
      <addaction name="actionHexView"/>
+     <addaction name="actionBodyHexView"/>
      <addaction name="separator"/>
      <addaction name="actionGoToData"/>
      <addaction name="separator"/>
@@ -424,10 +498,14 @@
      <addaction name="actionRemove"/>
     </widget>
     <widget class="QMenu" name="menuStoreActions">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="title">
       <string>S&amp;tore</string>
      </property>
      <addaction name="actionHexView"/>
+     <addaction name="actionBodyHexView"/>
      <addaction name="separator"/>
      <addaction name="actionExtract"/>
      <addaction name="actionExtractBody"/>
@@ -441,6 +519,10 @@
      <addaction name="actionReplace"/>
      <addaction name="actionReplaceBody"/>
     </widget>
+    <addaction name="actionGoToOffset"/>
+    <addaction name="actionGoToAddress"/>
+    <addaction name="actionSearch"/>
+    <addaction name="separator"/>
     <addaction name="menuCapsuleActions"/>
     <addaction name="menuImageActions"/>
     <addaction name="menuRegionActions"/>
@@ -448,13 +530,21 @@
     <addaction name="menuVolumeActions"/>
     <addaction name="menuFileActions"/>
     <addaction name="menuSectionActions"/>
-    <addaction name="menuStoreActions"/>
-    <addaction name="menuVariableActions"/>
     <addaction name="separator"/>
-    <addaction name="menuMessages"/>
+    <addaction name="menuStoreActions"/>
+    <addaction name="menuEntryActions"/>
+    <addaction name="separator"/>
+    <addaction name="menuMessageActions"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>&amp;View</string>
+    </property>
+    <addaction name="actionToggleBootGuardMarking"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuAction"/>
+   <addaction name="menuView"/>
    <addaction name="menuHelp"/>
   </widget>
   <action name="actionInsertAfter">
@@ -609,6 +699,9 @@
    <property name="text">
     <string>About &amp;Qt</string>
    </property>
+   <property name="shortcut">
+    <string>Shift+F1</string>
+   </property>
    <property name="menuRole">
     <enum>QAction::AboutQtRole</enum>
    </property>
@@ -616,6 +709,9 @@
   <action name="actionQuit">
    <property name="text">
     <string>&amp;Quit</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+X</string>
    </property>
    <property name="menuRole">
     <enum>QAction::QuitRole</enum>
@@ -626,13 +722,16 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Sear&amp;ch...</string>
+    <string>Searc&amp;h...</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+F</string>
    </property>
   </action>
   <action name="actionMessagesClear">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Clea&amp;r</string>
    </property>
@@ -658,6 +757,9 @@
    </property>
   </action>
   <action name="actionMessagesCopy">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>&amp;Copy</string>
    </property>
@@ -666,6 +768,9 @@
    </property>
   </action>
   <action name="actionMessagesCopyAll">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Copy &amp;all</string>
    </property>
@@ -700,7 +805,10 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Go to &amp;data</string>
+    <string>Go &amp;to data</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+T</string>
    </property>
   </action>
   <action name="actionHexView">
@@ -712,6 +820,91 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+D</string>
+   </property>
+  </action>
+  <action name="actionGoToOffset">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Go to offset...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+G</string>
+   </property>
+  </action>
+  <action name="actionBodyHexView">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Body hex vie&amp;w...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+D</string>
+   </property>
+  </action>
+  <action name="actionLoadGuidDatabase">
+   <property name="text">
+    <string>Load &amp;GUID database...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Alt+G</string>
+   </property>
+  </action>
+  <action name="actionGoToAddress">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Go to &amp;address...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+G</string>
+   </property>
+  </action>
+  <action name="actionToggleBootGuardMarking">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>BootGuard &amp;markings</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+B</string>
+   </property>
+  </action>
+  <action name="actionGenerateReport">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Generate &amp;report...</string>
+   </property>
+   <property name="toolTip">
+    <string>Generate report</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Alt+R</string>
+   </property>
+  </action>
+  <action name="actionUnloadGuidDatabase">
+   <property name="text">
+    <string>&amp;Unload GUID database</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Alt+U</string>
+   </property>
+  </action>
+  <action name="actionLoadDefaultGuidDatabase">
+   <property name="text">
+    <string>Load &amp;default GUID database</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Alt+D</string>
    </property>
   </action>
  </widget>

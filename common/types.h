@@ -44,6 +44,7 @@ namespace Types {
         Section,
         FreeSpace,
         VssStore,
+        Vss2Store,
         FtwStore,
         FdcStore,
         FsysStore,
@@ -77,7 +78,8 @@ namespace Subtypes {
         UnknownVolume = 110,
         Ffs2Volume,
         Ffs3Volume,
-        NvramVolume
+        NvramVolume,
+        MicrocodeVolume
     };
 
     enum RegionSubtypes {
@@ -86,11 +88,17 @@ namespace Subtypes {
         MeRegion,
         GbeRegion,
         PdrRegion,
+        DevExp1Region,
+        Bios2Region,
+        MicrocodeRegion,
+        EcRegion,
+        DevExp2Region,
+        IeRegion,
+        Tgbe1Region,
+        Tgbe2Region,
         Reserved1Region,
         Reserved2Region,
-        Reserved3Region,
-        EcRegion,
-        Reserved4Region
+        PttRegion
     };
 
     enum PaddingSubtypes {
@@ -111,11 +119,17 @@ namespace Subtypes {
         InvalidVssEntry = 140,
         StandardVssEntry,
         AppleVssEntry,
-        AuthVssEntry
+        AuthVssEntry,
+        IntelVssEntry
     };
 
+    enum FsysEntrySubtypes {
+        InvalidFsysEntry = 150,
+        NormalFsysEntry
+    };
+    
     enum EvsaEntrySubtypes {
-        InvalidEvsaEntry = 150,
+        InvalidEvsaEntry = 160,
         UnknownEvsaEntry,
         GuidEvsaEntry,
         NameEvsaEntry,
@@ -123,20 +137,20 @@ namespace Subtypes {
     };
 
     enum FlashMapEntrySubtypes {
-        VolumeFlashMapEntry = 160,
+        VolumeFlashMapEntry = 170,
         DataFlashMapEntry
     };
 
     enum MicrocodeSubtypes {
-        IntelMicrocode = 170,
+        IntelMicrocode = 180,
         AmdMicrocode
     };
 
     enum SlicDataSubtypes {
-        PubkeySlicData = 180,
+        PubkeySlicData = 190,
         MarkerSlicData
     };
-};
+}
 
 // *ToUString conversion routines
 extern UString actionTypeToUString(const UINT8 action);

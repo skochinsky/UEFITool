@@ -22,6 +22,7 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFont>
 #include <QListWidget>
 #include <QMenu>
 #include <QMessageBox>
@@ -31,6 +32,7 @@
 #include <QSettings>
 #include <QSplitter>
 #include <QString>
+#include <QTableWidget>
 #include <QTreeView>
 #include <QUrl>
 
@@ -40,10 +42,13 @@
 #include "../common/ffsparser.h"
 #include "../common/ffsops.h"
 #include "../common/ffsbuilder.h"
+#include "../common/ffsreport.h"
+#include "../common/guiddatabase.h"
 
 #include "searchdialog.h"
+#include "gotooffsetdialog.h"
+#include "gotoaddressdialog.h"
 #include "hexviewdialog.h"
-#include "messagelistitem.h"
 #include "ffsfinder.h"
 
 QT_BEGIN_NAMESPACE
@@ -65,16 +70,21 @@ public:
 
 private slots:
     void init();
+    void populateUi(const QItemSelection &selected);
     void populateUi(const QModelIndex &current);
-    void scrollTreeView(QListWidgetItem* item);
+    void scrollTreeView(QListWidgetItem* item); // For messages
+    void scrollTreeView(QTableWidgetItem* item); // For FIT table entries
 
     void openImageFile();
     void openImageFileInNewWindow();
     void saveImageFile();
+    
     void search();
+    void goToOffset();
+    void goToAddress();
 
     void hexView();
-
+    void bodyHexView();
     void goToData();
     
     void extract(const UINT8 mode);
@@ -100,25 +110,40 @@ private slots:
     void enableMessagesCopyActions(QListWidgetItem* item);
     void clearMessages();
 
+    void toggleBootGuardMarking(bool enabled);
+
     void about();
     void aboutQt();
 
     void exit();
     void writeSettings();
 
+    void loadGuidDatabase();
+	void unloadGuidDatabase();
+	void loadDefaultGuidDatabase();
+    void generateReport();
+
+    void currentTabChanged(int index);
+
 private:
     Ui::UEFITool* ui;
     TreeModel* model;
     FfsParser* ffsParser;
     FfsFinder* ffsFinder;
+    FfsReport* ffsReport;
     FfsOperations* ffsOps;
     FfsBuilder* ffsBuilder;
     SearchDialog* searchDialog;
     HexViewDialog* hexViewDialog;
+    GoToOffsetDialog* goToOffsetDialog;
+    GoToAddressDialog* goToAddressDialog;
     QClipboard* clipboard;
     QString currentDir;
+    QString currentPath;
     QString currentProgramPath;
+    QFont currentFont;
     const QString version;
+    bool markingEnabled;
 
     bool enableExtractBodyUncompressed(const QModelIndex &current);
 
@@ -129,7 +154,16 @@ private:
     void showParserMessages();
     void showFinderMessages();
     void showFitTable();
+    void showSecurityInfo();
     void showBuilderMessages();
+
+    enum {
+        TAB_PARSER,
+        TAB_FIT,
+        TAB_SECURITY,
+        TAB_SEARCH,
+        TAB_BUILDER
+    };
 };
 
 #endif // UEFITOOL_H

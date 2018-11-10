@@ -12,6 +12,8 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 */
 
 #include "ffsops.h"
+#include "ffs.h"
+#include "utility.h"
 
 USTATUS FfsOperations::extract(const UModelIndex & index, UString & name, UByteArray & extracted, const UINT8 mode)
 {
@@ -19,61 +21,36 @@ USTATUS FfsOperations::extract(const UModelIndex & index, UString & name, UByteA
     if (!index.isValid())
         return U_INVALID_PARAMETER;
 
-    // Get data from parsing data
-    PARSING_DATA pdata = parsingDataFromUModelIndex(index);
-
-    // Construct a name for extracted data
-    UString itemName = model->name(index);
-    UString itemText = model->text(index);
-
     // Default name
-    name = itemName.replace(' ', '_').replace('/', '_').replace('-', '_');
-
-    switch (model->type(index)) {
-    case Types::Volume:        if (pdata.volume.hasExtendedHeader) name = guidToUString(pdata.volume.extendedHeaderGuid).replace('-', '_'); break;
-    case Types::NvarEntry:
-    case Types::VssEntry:
-    case Types::FsysEntry:
-    case Types::EvsaEntry:
-    case Types::FlashMapEntry:
-    case Types::File:          name = itemText.isEmpty() ? itemName : itemText.replace(' ', '_').replace('-', '_'); break;
-    case Types::Section: {
-        // Get parent file name
-        UModelIndex fileIndex = model->findParentOfType(index, Types::File);
-        UString fileText = model->text(fileIndex);
-        name = fileText.isEmpty() ? model->name(fileIndex) : fileText.replace(' ', '_').replace('-', '_');
-        // Append section subtype name
-        name += '_' + itemName.replace(' ', '_');
-        } break;
-    }
+    name = uniqueItemName(index);
 
     // Get extracted data
     if (mode == EXTRACT_MODE_AS_IS) {
         // Extract as is, with header body and tail
         extracted.clear();
-        extracted.append(model->header(index));
-        extracted.append(model->body(index));
-        extracted.append(model->tail(index));
+        extracted += model->header(index);
+        extracted += model->body(index);
+        extracted += model->tail(index);
     }
     else if (mode == EXTRACT_MODE_BODY) {
-        name += QObject::tr("_body");
+        name += UString("_body");
         // Extract without header and tail
         extracted.clear();
-        extracted.append(model->body(index));
+        extracted += model->body(index);
     }
     else if (mode == EXTRACT_MODE_BODY_UNCOMPRESSED) {
-        name += QObject::tr("_body_unc");
+        name += UString("_body_unc");
         // Extract without header and tail, uncompressed
         extracted.clear();
         // There is no need to redo decompression, we can use child items
         for (int i = 0; i < model->rowCount(index); i++) {
              UModelIndex childIndex = index.child(i, 0);
              // Ensure 4-byte alignment of current section
-             extracted.append(UByteArray('\x00', ALIGN4((UINT32)extracted.size()) - (UINT32)extracted.size()));
+             extracted += UByteArray(ALIGN4((UINT32)extracted.size()) - (UINT32)extracted.size(), '\x00');
              // Add current section header, body and tail
-             extracted.append(model->header(childIndex));
-             extracted.append(model->body(childIndex));
-             extracted.append(model->tail(childIndex));
+             extracted += model->header(childIndex);
+             extracted += model->body(childIndex);
+             extracted += model->tail(childIndex);
         }
     }
     else
@@ -82,14 +59,13 @@ USTATUS FfsOperations::extract(const UModelIndex & index, UString & name, UByteA
     return U_SUCCESS;
 }
 
-USTATUS FfsOperations::replace(const UModelIndex & index, const UString & data, const UINT8 mode)
+USTATUS FfsOperations::replace(const UModelIndex & index, UByteArray & data, const UINT8 mode)
 {
+    U_UNUSED_PARAMETER(data);
+
     // Sanity check
     if (!index.isValid())
         return U_INVALID_PARAMETER;
-
-    // Get data from parsing data
-    //PARSING_DATA pdata = parsingDataFromQModelIndex(index);
 
     if (mode == REPLACE_MODE_AS_IS) {
         return U_NOT_IMPLEMENTED;
@@ -97,10 +73,8 @@ USTATUS FfsOperations::replace(const UModelIndex & index, const UString & data, 
     else if (mode == REPLACE_MODE_BODY) {
         return U_NOT_IMPLEMENTED;
     }
-    else 
-        return U_UNKNOWN_REPLACE_MODE;
     
-    return U_NOT_IMPLEMENTED;
+     return U_UNKNOWN_REPLACE_MODE;
 }
 
 USTATUS FfsOperations::remove(const UModelIndex & index)
